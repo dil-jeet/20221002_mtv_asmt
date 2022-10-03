@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular.min.js" integrity="sha512-KZmyTq3PLx9EZl0RHShHQuXtrvdJ+m35tuOiwlcZfs/rE7NZv29ygNA8SFCkMXTnYZQK2OX0Gm2qKGfvWEtRXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <title>Document Analysis</title>
+
+</head>
+
+<body class="p-2 bg-secondary bg-opacity-25" ng-app="djVrAsmtApp" ng-controller="djVrAsmtCtrl">
+
+    <div class="main_content bg-bod my-4 container-sm" style="max-width:800px;">
+        <h1 class="">Document Analyser</h1>
+        <form ng-submit="analyseData()" oninput="return false;" class="row bg-body shadow my-3 p-3 g-1 rounded-3">
+            <label for="textData" class="label">Enter data:</label>
+            <div class="mb-3 col-ms-12">
+                <textarea ng-model="tdata" id="textData" name="textData" class="form-control" placeholder="Input String"
+                style="height: 100px"></textarea>
+            </div>
+
+            <div class="my-3 col-sm-2 col-4 g-1">
+                <label for="char">Character:</label>
+                <input ng-model="char" type="text" maxlength="1" size="1" id="char" name="char" class="form-control"
+                placeholder="Character" style="" />
+            </div>
+            <div class="my-3  col-sm-3 col-8 g-1">
+                <label for="selectLevel">Level:</label>
+                <select ng-model="level" id="selectLevel" name="selectLevel" class="form-select "
+                style="text-transform:capitalize;" placeholder="Please select calculation level">
+                <option selected></option>
+                <option selected>sentence</option>
+                <option>paragraph</option>
+            </select>
+        </div>
+        <div class="my-3  col-3 col-sm-2 btn-group" style="">
+            <button class="btn btn-outline-primary btn-lg ">Analyse</button>
+        </div>
+        <div class="my-3 mx-5 col-4 col-sm-2 btn-group" style="">
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal"
+            data-bs-target="#assumptsModal" >Assumptions</button>
+        </div>
+
+
+
+    </form>
+
+    <div ng-if="errors.length" class="alert alert-danger">
+        <ul>
+            <li ng-repeat="(errIndex, err) in errors">
+                {{err}}
+            </li>
+        </ul>
+    </div>
+    <div ng-if="!errors.length">
+        <div class="my-2 p-3 bg-success text-white rounded shadow">
+            <h2 class="h2">Result: Median = <strong class="d-inline-block ">{{median}}</strong></h2>
+        </div>
+        <div id="histoChartDiv" class="card shadow p-3">
+            <h2 class="h2 p-2">Histogram <button ng-click="analyseData()" class="btn">⟳</button></h2>
+            <canvas id="histoChart" style="max-height:300px;"></canvas>
+        </div>
+        <div class="card shadow my-2">
+            <div class="card-body">
+                <h5 class="card-title" onclick="document.querySelector('#divMoreDetails').classList.toggle('d-none')">
+                    More Details
+                    <span class="pull-right d-inline-block" style="line-height:2em;vertical-align: top; cursor: pointer;">&#65088;</span>
+                </h5>
+                <p id="pMoreDetails" class="card-text">
+                    <div id="divMoreDetails" class="my-2 d-none">
+                        Count-Numbers: {{numbers}}
+                        <div ng-repeat="n in numbers">{{n}}</div>
+                        <div class="">
+                            Sentences / Paragraphs - <var class="bg-light d-inline-block"
+                            style="text-transform: capitalize"> {{level}} </var>(s):
+                            <code class="card">
+                                <div >[count] String-Sentence/Paragraph</div>
+                                <div ng-repeat="(i,item) in SOP">{{level=='sentence'?'Sent.':'Para.'}}{{i+1}}: [Count={{item.y}}] {{item.x}}</div>
+                            </code>
+                        </div>
+
+                    </div>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="assumptsModal" tabindex="-1" aria-labelledby="assumptsLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assumptsLabel">Assumptions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="white-space: pre-line">
+                    * Character comparisan is case-sensitive
+                    * Perid(.) is a word-breaker
+                    * String(". ") is a sentence-breaker. ie: New sentences begin after a space following fullstop.
+                    * Sentences contain no word-sperators other than " " (single space)
+                    * (ECMAScript6 supported)
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"
+integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8"
+crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<script>
+    var app = angular.module("djVrAsmtApp", []);
+
+    app.controller("djVrAsmtCtrl", function ($scope) {
+        $scope.level = '';
+        $scope.numbers = [];
+        $scope.median = '';
+        $scope.char = '';
+            $scope.tdata = ''; //`This is an apple.That is not an oragne.\n \nThis is not an apple\nThis is not an apple`;
+            $scope.errors = [];
+            $scope.SOP = [];
+
+            $scope.analyseData = function () {
+                $scope.errors = [];
+                $scope.median = -1;
+                $scope.numbers = [];
+                var td = $scope.tdata;
+                var letter = $scope.char;
+                var lvl = $scope.level;
+                var nums = [];
+
+                if (!td.trim().length) {
+                    $scope.errors.push('Empty String!');
+                }
+                if (!letter.trim().length) {
+                    $scope.errors.push('Character Required!');
+                }
+                if (!lvl.trim().length) {
+                    $scope.errors.push('Level Required!');
+                }
+
+                if($scope.errors.length){
+                    return false;
+                }
+
+                var delim1 = (lvl == 'sentence') ? '. ' : '\n';
+                var delim2 = ' ';
+                var s = td.split(delim1); // sentencesOrParas-Array
+                if (lvl == 'sentence') {
+                    s = td.replaceAll('\n', '. ').split(delim1); // sentencesOrParas-Array
+                }
+                var words = [];
+                var sopArray = []; // sentenceOrPara-Collection
+
+                s.forEach(sentOrpara => {
+                    if (sentOrpara.trim().length) {
+                        let sw = sentOrpara.replaceAll('.', ' ').split(delim2); // words-Array
+                        let countsDesired = 0;
+
+                        sw.forEach(word => {
+                            if (word.trim().length) {
+                                let wfound = word.includes(letter); // (word.split(letter).length - 1);
+                                if (wfound) {
+                                    countsDesired++;
+                                }
+                                words.push(word)
+                            }
+                        });
+
+                        nums.push(countsDesired);
+                        sopArray.push({ 'x': sentOrpara, 'y': countsDesired, 'legend': sentOrpara });
+                    }
+
+                });
+
+                $scope.numbers = nums;
+                $scope.words = words;
+                $scope.SOP = sopArray;
+
+                $scope.median = nums[Math.floor(nums.length / 2)];
+
+                let chartSop = angular.copy(sopArray);
+                chartSop.forEach((e, i) => {
+                    let txt = angular.copy(e.x);
+                    e.paddockLabel = angular.copy(txt);
+                    e.x = angular.copy((lvl == 'sentence' ? 'Sent.' : 'Para') + ' ' + (i+1));
+                });
+                try {
+                    var config = {
+                        type: 'line',
+                        title: 'HistoGram',
+                        options: {
+                            scales: {
+                                yAxis: { stepSize: 1, beginAtZero: true, text: 'text' },
+                                xAxis: {
+                                    stacked: false,
+                                    offset: true,
+                                }
+                            }
+                        },
+                        data: {
+                            datasets: [
+                            {
+                                type: 'bar',
+                                'label': `Counts(${$scope.char})`,
+                                backgroundColor: 'rgb(55, 199, 199,0.5)',
+                                borderColor: 'rgb(55, 99, 132,1)',
+                                data: chartSop,
+                            }
+                            ],
+                        },
+                    };
+
+                    let chartEl = document.getElementById('histoChart');
+                    try { theChart.destroy(); } catch (exptn) { }
+                    theChart = new Chart(chartEl, config);
+                } catch (exptn) {
+                }
+
+            };
+
+            $scope.analyseData();
+            $scope.$watchGroup(['char', 'level', 'tdata'], function (newValues, oldValues) {
+                $scope.analyseData();
+            });
+
+
+        });
+
+    </script>
+</body>
+
+</html>
